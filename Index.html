@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Isomorphic Environment</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100vw; /* Make canvas fill viewport width */
+            height: 100vh; /* Make canvas fill viewport height */
+        }
+        /* Styling for the instructions message */
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            z-index: 10;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="instructions">
+        Use **W A S D** keys to move the character.
+    </div>
+
+    <!-- Three.js library import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // Global variables for Three.js scene, camera, renderer, etc.
+        let scene, camera, renderer, character, plane;
+        let keys = { w: false, a: false, s: false, d: false }; // State for pressed keys
+        const moveSpeed = 200; // Speed of the character movement (adjusted for better feel)
+        const frustumSize = 1000; // Size of the orthographic camera's view frustum
+        let clock = new THREE.Clock(); // For frame-rate independent movement
+
+        // Camera trailing parameters
+        const cameraFollowDampening = 0.05; // How smoothly the camera follows (0-1, lower is smoother)
+        const cameraOffset = new THREE.Vector3(500, 500, 500); // Fixed offset from character for isomorphic view
+
+        /**
+         * Creates a 2D canvas with text, suitable for use as a Three.js texture.
+         * @param {string} text - The text content.
+         * @param {string} textColor - CSS color for the text.
+         * @param {string} backgroundColor - CSS color for the background.
+         * @param {number} width - Width of the canvas.
+         * @param {number} height - Height of the canvas.
+         * @returns {HTMLCanvasElement} - The created canvas element.
+         */
+        function createTextCanvas(text, textColor, backgroundColor, width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+
+            // Draw background
+            context.fillStyle = backgroundColor;
+            context.fillRect(0, 0, width, height);
+
+            // Draw text
+            context.font = 'Bold 150px Inter'; // Adjust font size as needed
+            context.fillStyle = textColor;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, width / 2, height / 2);
+
+            return canvas;
+        }
+
+        /**
+         * Initializes the 3D scene, camera, renderer, and objects.
+         */
+        function init() {
+            // 1. Scene setup
+            scene = new THREE.Scene();
+            // Set the background color to a darker blue to represent the lower horizon/ground blend
+            scene.background = new THREE.Color(0x70a0e0); // A medium blue for the lower part of the sky/horizon
+
+            // 2. Camera setup (Orthographic for isomorphic view)
+            const aspect = window.innerWidth / window.innerHeight;
+            // The orthographic camera is defined by its frustum, ensuring parallel projection.
+            // Arguments: left, right, top, bottom, near, far
+            camera = new THREE.OrthographicCamera(
+                frustumSize * aspect / -2,  // left
+                frustumSize * aspect / 2,   // right
+                frustumSize / 2,            // top
+                frustumSize / -2,           // bottom
+                1,                          // near clipping plane
+                2000                        // far clipping plane
+            );
+            // Initial camera position (will be updated by trailing logic)
+            camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
+            camera.lookAt(0, 0, 0); // Initial lookAt, will be updated
+
+            // 3. Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true }); // Enable antialiasing for smoother edges
+            renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size to fill the window
+            renderer.setPixelRatio(window.devicePixelRatio); // Handle high DPI screens
+            document.body.appendChild(renderer.domElement); // Add the renderer's canvas to the DOM
+
+            // Enable shadows in the renderer
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+
+            // 4. Lighting
+            // HemisphereLight: Simulates natural light from the sky and ground
+            // Arguments: skyColor, groundColor, intensity
+            const skyColor = new THREE.Color(0xADD8E6); // Lighter blue for the sky
+            const groundColor = new THREE.Color(0x406090); // Darker blue for the ground/ambient shadow
+            const hemisphereLight = new THREE.HemisphereLight(skyColor, groundColor, 0.7);
+            scene.add(hemisphereLight);
+
+            // DirectionalLight: Simulates light from a distant source (like the sun)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // White light, increased intensity
+            directionalLight.position.set(200, 300, 100); // Position it from top-right-front
+            directionalLight.castShadow = true; // Enable shadows
+
+            // Configure shadow camera for directional light
+            directionalLight.shadow.mapSize.width = 1024; // default is 512
+            directionalLight.shadow.mapSize.height = 1024; // default is 512
+            directionalLight.shadow.camera.near = 0.5; // default
+            directionalLight.shadow.camera.far = 500; // default
+            directionalLight.shadow.camera.left = -500;
+            directionalLight.shadow.camera.right = 500;
+            directionalLight.shadow.camera.top = 500;
+            directionalLight.shadow.camera.bottom = -500;
+            scene.add(directionalLight);
+
+            // 5. Ground Plane
+            // Create a large, flat plane for the ground
+            const planeGeometry = new THREE.PlaneGeometry(2000, 2000);
+            // A simple grey material for the ground
+            const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x888888, side: THREE.DoubleSide });
+            plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -Math.PI / 2; // Rotate to be flat on the XZ plane
+            plane.receiveShadow = true; // Allow the plane to receive shadows
+            scene.add(plane);
+
+            // 6. Character
+            // Create a simple character (e.g., a red box)
+            const characterGeometry = new THREE.BoxGeometry(50, 100, 50); // Width, Height, Depth
+            const characterMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 }); // Red color
+            character = new THREE.Mesh(characterGeometry, characterMaterial);
+            character.position.y = 50; // Position it slightly above the plane so it doesn't sink
+            character.castShadow = true; // Allow the character to cast shadows
+            scene.add(character);
+
+            // 7. Text Overlays on Floor
+            const textPlaneWidth = 2000;
+            const textPlaneHeight = 1000; // Half the main plane size
+
+            // Mason's Projects text plane
+            const masonCanvas = createTextCanvas(
+                "Mason's Projects", '#FFD700', 'rgba(0,0,0,0.5)', // Gold text, semi-transparent black background
+                textPlaneWidth, textPlaneHeight
+            );
+            const masonTexture = new THREE.CanvasTexture(masonCanvas);
+            const masonMaterial = new THREE.MeshBasicMaterial({ map: masonTexture, transparent: true, side: THREE.DoubleSide });
+            const masonPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, textPlaneHeight), masonMaterial);
+            masonPlane.rotation.x = -Math.PI / 2; // Lay flat
+            masonPlane.position.z = -textPlaneHeight / 2; // Position in the negative Z half
+            masonPlane.position.y = 0.1; // Slightly above the ground to prevent z-fighting
+            scene.add(masonPlane);
+
+            // Tyson's Projects text plane
+            const tysonCanvas = createTextCanvas(
+                "Tyson's Projects", '#00FFFF', 'rgba(0,0,0,0.5)', // Cyan text, semi-transparent black background
+                textPlaneWidth, textPlaneHeight
+            );
+            const tysonTexture = new THREE.CanvasTexture(tysonCanvas);
+            const tysonMaterial = new THREE.MeshBasicMaterial({ map: tysonTexture, transparent: true, side: THREE.DoubleSide });
+            const tysonPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, textPlaneHeight), tysonMaterial);
+            tysonPlane.rotation.x = -Math.PI / 2; // Lay flat
+            tysonPlane.position.z = textPlaneHeight / 2; // Position in the positive Z half
+            tysonPlane.position.y = 0.1; // Slightly above the ground to prevent z-fighting
+            scene.add(tysonPlane);
+
+
+            // 8. Event Listeners
+            // Listen for keyboard input for movement
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            // Listen for window resize events to update camera and renderer
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        /**
+         * Handles window resizing, updating camera aspect ratio and renderer size.
+         */
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            // Update camera frustum based on new aspect ratio
+            camera.left = frustumSize * aspect / -2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = frustumSize / -2;
+            camera.updateProjectionMatrix(); // Recalculate projection matrix
+            renderer.setSize(window.innerWidth, window.innerHeight); // Resize renderer
+        }
+
+        /**
+         * Handles keydown events to set movement flags.
+         * @param {KeyboardEvent} event - The keyboard event.
+         */
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW':
+                    keys.w = true;
+                    break;
+                case 'KeyA':
+                    keys.a = true;
+                    break;
+                case 'KeyS':
+                    keys.s = true;
+                    break;
+                case 'KeyD':
+                    keys.d = true;
+                    break;
+            }
+        }
+
+        /**
+         * Handles keyup events to clear movement flags.
+         * @param {KeyboardEvent} event - The keyboard event.
+         */
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW':
+                    keys.w = false;
+                    break;
+                case 'KeyA':
+                    keys.a = false;
+                    break;
+                case 'KeyS':
+                    keys.s = false;
+                    break;
+                case 'KeyD':
+                    keys.d = false;
+                    break;
+            }
+        }
+
+        /**
+         * The animation loop, continuously updates the scene and renders.
+         */
+        function animate() {
+            requestAnimationFrame(animate); // Request the next frame
+
+            const deltaTime = clock.getDelta(); // Time elapsed since last frame
+
+            // Update character position based on pressed keys
+            if (character) {
+                if (keys.w) {
+                    character.position.z -= moveSpeed * deltaTime; // Move backward in Z (forward in view)
+                }
+                if (keys.s) {
+                    character.position.z += moveSpeed * deltaTime; // Move forward in Z (backward in view)
+                }
+                if (keys.a) {
+                    character.position.x -= moveSpeed * deltaTime; // Move left in X
+                }
+                if (keys.d) {
+                    character.position.x += moveSpeed * deltaTime; // Move right in X
+                }
+
+                // Optional: Clamp character position to stay within the plane
+                const halfPlaneSize = 1000 / 2 - 25; // Plane size / 2 - half character size
+                character.position.x = Math.max(-halfPlaneSize, Math.min(halfPlaneSize, character.position.x));
+                character.position.z = Math.max(-halfPlaneSize, Math.min(halfPlaneSize, character.position.z));
+
+                // Camera Trailing Logic
+                // Calculate the target camera position
+                const targetCameraPosition = new THREE.Vector3().copy(character.position).add(cameraOffset);
+
+                // Smoothly interpolate camera's current position towards the target position
+                camera.position.lerp(targetCameraPosition, cameraFollowDampening);
+
+                // Make the camera look at the character's position
+                camera.lookAt(character.position);
+            }
+
+            renderer.render(scene, camera); // Render the scene
+        }
+
+        // Initialize the scene when the window loads
+        window.onload = function() {
+            init();
+            animate(); // Start the animation loop
+        };
+    </script>
+</body>
+</html>
