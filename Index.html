@@ -60,7 +60,7 @@
          * @param {number} height - Height of the canvas.
          * @returns {HTMLCanvasElement} - The created canvas element.
          */
-        function createTextCanvas(text, textColor, backgroundColor, width, height) {
+        function createTextCanvas(texts, textColor, backgroundColor, width, height) {
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
@@ -71,11 +71,101 @@
             context.fillRect(0, 0, width, height);
 
             // Draw text
-            context.font = 'Bold 150px Inter'; // Adjust font size as needed
             context.fillStyle = textColor;
             context.textAlign = 'center';
             context.textBaseline = 'middle';
-            context.fillText(text, width / 2, height / 2);
+            
+            texts.forEach(textInfo => {
+                context.font = textInfo.font;
+                context.fillText(textInfo.text, width / 2, textInfo.y);
+            });
+
+            return canvas;
+        }
+
+        /**
+         * Creates a project card canvas with image placeholder, title, and description.
+         * @param {string} title - Project title.
+         * @param {string} description - Project description.
+         * @param {string} imageUrl - URL to project image.
+         * @param {number} width - Canvas width.
+         * @param {number} height - Canvas height.
+         * @returns {HTMLCanvasElement} - The created canvas element.
+         */
+        function createProjectCard(title, description, imageUrl, width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+
+            // Draw background
+            context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            context.fillRect(0, 0, width, height);
+            
+            // Draw border
+            context.strokeStyle = '#333';
+            context.lineWidth = 4;
+            context.strokeRect(0, 0, width, height);
+
+            // Image placeholder
+            const imageHeight = height * 0.5; // Reduced from 0.6 to make room for more text
+            context.fillStyle = '#ddd';
+            context.fillRect(20, 20, width - 40, imageHeight - 40);
+            
+            // Image placeholder text
+            context.fillStyle = '#666';
+            context.font = 'Bold 30px Inter'; // Reduced from 40px
+            context.textAlign = 'center';
+            context.fillText('Project Image', width / 2, imageHeight / 2);
+
+            // Title
+            context.fillStyle = '#333';
+            context.font = 'Bold 40px Inter'; // Reduced from 60px
+            context.textAlign = 'center';
+            context.fillText(title, width / 2, imageHeight + 35);
+
+            // Description with scrolling text effect
+            context.fillStyle = '#666';
+            context.font = '24px Inter'; // Reduced from 40px
+            context.textAlign = 'left'; // Changed to left align for better readability
+            
+            // Create scrolling text in a defined area
+            const textAreaY = imageHeight + 70;
+            const textAreaHeight = height - textAreaY - 20;
+            const lineHeight = 30;
+            const maxLines = Math.floor(textAreaHeight / lineHeight);
+            
+            // Word wrap for description
+            const words = description.split(' ');
+            const lines = [];
+            let line = '';
+            const maxWidth = width - 60; // More padding
+            
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = context.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    lines.push(line.trim());
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            if (line.trim()) {
+                lines.push(line.trim());
+            }
+
+            // Draw visible lines (truncate if too many)
+            const visibleLines = lines.slice(0, maxLines);
+            visibleLines.forEach((textLine, index) => {
+                context.fillText(textLine, 30, textAreaY + (index * lineHeight));
+            });
+
+            // Add "..." if text is truncated
+            if (lines.length > maxLines) {
+                context.fillText('...', 30, textAreaY + ((maxLines - 1) * lineHeight) + 25);
+            }
 
             return canvas;
         }
@@ -160,36 +250,209 @@
 
             // 7. Text Overlays on Floor
             const textPlaneWidth = 2000;
-            const textPlaneHeight = 1000; // Half the main plane size
 
-            // Mason's Projects text plane
-            const masonCanvas = createTextCanvas(
-                "Mason's Projects", '#FFD700', 'rgba(0,0,0,0.5)', // Gold text, semi-transparent black background
-                textPlaneWidth, textPlaneHeight
+            // Mason's Projects Header (above donut)
+            const masonHeaderCanvas = createTextCanvas(
+                [{ text: "Mason's Projects:", font: 'Bold 120px Inter', y: 100 }], '#FFD700', 'rgba(0,0,0,0.5)',
+                textPlaneWidth, 200
             );
-            const masonTexture = new THREE.CanvasTexture(masonCanvas);
-            const masonMaterial = new THREE.MeshBasicMaterial({ map: masonTexture, transparent: true, side: THREE.DoubleSide });
-            const masonPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, textPlaneHeight), masonMaterial);
-            masonPlane.rotation.x = -Math.PI / 2; // Lay flat
-            masonPlane.position.z = -textPlaneHeight / 2; // Position in the negative Z half
-            masonPlane.position.y = 0.1; // Slightly above the ground to prevent z-fighting
-            scene.add(masonPlane);
+            const masonHeaderTexture = new THREE.CanvasTexture(masonHeaderCanvas);
+            const masonHeaderMaterial = new THREE.MeshBasicMaterial({ map: masonHeaderTexture, transparent: true, side: THREE.DoubleSide });
+            const masonHeaderPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), masonHeaderMaterial);
+            masonHeaderPlane.rotation.x = -Math.PI / 2;
+            masonHeaderPlane.position.z = -400; // Above donut, in Mason's area
+            masonHeaderPlane.position.y = 0.1;
+            scene.add(masonHeaderPlane);
 
-            // Tyson's Projects text plane
-            const tysonCanvas = createTextCanvas(
-                "Tyson's Projects", '#00FFFF', 'rgba(0,0,0,0.5)', // Cyan text, semi-transparent black background
-                textPlaneWidth, textPlaneHeight
+            // Center text plane (donut)
+            const amongusCanvas = createTextCanvas(
+                [{ text: "donut", font: 'Bold 150px Inter', y: 100 }], '#FFFFFF', 'rgba(0,0,0,0.7)', // White text, more opaque background
+                textPlaneWidth, 200 // Shorter height for the center text
             );
-            const tysonTexture = new THREE.CanvasTexture(tysonCanvas);
-            const tysonMaterial = new THREE.MeshBasicMaterial({ map: tysonTexture, transparent: true, side: THREE.DoubleSide });
-            const tysonPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, textPlaneHeight), tysonMaterial);
-            tysonPlane.rotation.x = -Math.PI / 2; // Lay flat
-            tysonPlane.position.z = textPlaneHeight / 2; // Position in the positive Z half
-            tysonPlane.position.y = 0.1; // Slightly above the ground to prevent z-fighting
-            scene.add(tysonPlane);
+            const amongusTexture = new THREE.CanvasTexture(amongusCanvas);
+            const amongusMaterial = new THREE.MeshBasicMaterial({ map: amongusTexture, transparent: true, side: THREE.DoubleSide });
+            const amongusPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), amongusMaterial);
+            amongusPlane.rotation.x = -Math.PI / 2; // Lay flat
+            amongusPlane.position.z = 0; // Centered between Mason and Tyson
+            amongusPlane.position.y = 0.11; // Slightly above the other planes to prevent z-fighting
+            scene.add(amongusPlane);
 
+            // Tyson's Projects Header (below donut)
+            const tysonHeaderCanvas = createTextCanvas(
+                [{ text: "Tyson's Projects:", font: 'Bold 120px Inter', y: 100 }], '#00FFFF', 'rgba(0,0,0,0.5)',
+                textPlaneWidth, 200
+            );
+            const tysonHeaderTexture = new THREE.CanvasTexture(tysonHeaderCanvas);
+            const tysonHeaderMaterial = new THREE.MeshBasicMaterial({ map: tysonHeaderTexture, transparent: true, side: THREE.DoubleSide });
+            const tysonHeaderPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), tysonHeaderMaterial);
+            tysonHeaderPlane.rotation.x = -Math.PI / 2;
+            tysonHeaderPlane.position.z = 400; // Below donut, in Tyson's area
+            tysonHeaderPlane.position.y = 0.1;
+            scene.add(tysonHeaderPlane);
 
-            // 8. Event Listeners
+            // 8. Project Cards
+            const cardWidth = 400;
+            const cardHeight = 500;
+
+            // Mason's Project Cards
+            const masonProject1Canvas = createProjectCard(
+                "Awesome Game",
+                "An innovative 3D adventure game with stunning graphics and immersive gameplay mechanics.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const masonProject1Texture = new THREE.CanvasTexture(masonProject1Canvas);
+            const masonProject1Material = new THREE.MeshBasicMaterial({ map: masonProject1Texture, transparent: true });
+            const masonProject1Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject1Material);
+            masonProject1Plane.rotation.x = -Math.PI / 2;
+            masonProject1Plane.position.set(-300, 0.12, -600);
+            masonProject1Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/awesome-game' };
+            scene.add(masonProject1Plane);
+
+            const masonProject2Canvas = createProjectCard(
+                "Cool Website",
+                "A responsive modern website built with cutting-edge technologies and beautiful design.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const masonProject2Texture = new THREE.CanvasTexture(masonProject2Canvas);
+            const masonProject2Material = new THREE.MeshBasicMaterial({ map: masonProject2Texture, transparent: true });
+            const masonProject2Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject2Material);
+            masonProject2Plane.rotation.x = -Math.PI / 2;
+            masonProject2Plane.position.set(300, 0.12, -600);
+            masonProject2Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/cool-website' };
+            scene.add(masonProject2Plane);
+
+            // Tyson's Project Cards
+            const tysonProject1Canvas = createProjectCard(
+                "AI Assistant",
+                "An intelligent AI-powered assistant that helps users with various tasks and provides smart recommendations.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const tysonProject1Texture = new THREE.CanvasTexture(tysonProject1Canvas);
+            const tysonProject1Material = new THREE.MeshBasicMaterial({ map: tysonProject1Texture, transparent: true });
+            const tysonProject1Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject1Material);
+            tysonProject1Plane.rotation.x = -Math.PI / 2;
+            tysonProject1Plane.position.set(-300, 0.12, 600);
+            tysonProject1Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/ai-assistant' };
+            scene.add(tysonProject1Plane);
+
+            const tysonProject2Canvas = createProjectCard(
+                "Data Visualizer",
+                "A powerful tool for creating interactive data visualizations and insightful analytics dashboards.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const tysonProject2Texture = new THREE.CanvasTexture(tysonProject2Canvas);
+            const tysonProject2Material = new THREE.MeshBasicMaterial({ map: tysonProject2Texture, transparent: true });
+            const tysonProject2Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject2Material);
+            tysonProject2Plane.rotation.x = -Math.PI / 2;
+            tysonProject2Plane.position.set(300, 0.12, 600);
+            tysonProject2Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/data-visualizer' };
+            scene.add(tysonProject2Plane);
+
+            // 9. Mouse Interaction for Project Cards
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const projectCards = [masonProject1Plane, masonProject2Plane, tysonProject1Plane, tysonProject2Plane];
+
+            function onMouseClick(event) {
+                // Calculate mouse position in normalized device coordinates
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                // Update the raycaster with the camera and mouse position
+                raycaster.setFromCamera(mouse, camera);
+
+                // Calculate objects intersecting the ray
+                const intersects = raycaster.intersectObjects(projectCards);
+
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    if (clickedObject.userData.type === 'projectCard' && clickedObject.userData.url) {
+                        window.open(clickedObject.userData.url, '_blank');
+                    }
+                }
+            }
+
+            function onMouseMove(event) {
+                // Calculate mouse position for hover effects
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(projectCards);
+
+                // Reset all cards to normal scale
+                projectCards.forEach(card => {
+                    card.scale.set(1, 1, 1);
+                });
+
+                // Scale up hovered card
+                if (intersects.length > 0) {
+                    document.body.style.cursor = 'pointer';
+                    intersects[0].object.scale.set(1.1, 1.1, 1.1);
+                } else {
+                    document.body.style.cursor = 'default';
+                }
+            }
+
+            // Add mouse event listeners
+            document.addEventListener('click', onMouseClick);
+            document.addEventListener('mousemove', onMouseMove);
+
+            // 10. YouTube Video Pedestal Display (right side of scene)
+            const videoWidth = 220;
+            const videoHeight = 124;
+            const pedestalHeight = 120;
+            const pedestalRadius = 90;
+
+            // Create a pedestal (cylinder)
+            const pedestalGeometry = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius, pedestalHeight, 32);
+            const pedestalMaterial = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+            const pedestal = new THREE.Mesh(pedestalGeometry, pedestalMaterial);
+            pedestal.position.set(700, pedestalHeight / 2, 0);
+            scene.add(pedestal);
+
+            // Create the iframe for the YouTube video (smaller size)
+            const youtubeIframe = document.createElement('iframe');
+            youtubeIframe.src = 'https://www.youtube.com/embed/apYvMDs31bA?start=138&autoplay=0&mute=1&controls=1';
+            youtubeIframe.width = videoWidth;
+            youtubeIframe.height = videoHeight;
+            youtubeIframe.style.border = 'none';
+            youtubeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            youtubeIframe.allowFullscreen = true;
+            youtubeIframe.style.position = 'absolute';
+            youtubeIframe.style.zIndex = '20';
+            document.body.appendChild(youtubeIframe);
+
+            // Update the iframe position to match the top of the pedestal
+            function updateIframePosition() {
+                // 3D position at the top center of the pedestal
+                const vector = new THREE.Vector3(700, pedestalHeight + videoHeight / 8, 0);
+                vector.project(camera);
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth - videoWidth / 2;
+                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight - videoHeight / 2;
+                youtubeIframe.style.left = `${x}px`;
+                youtubeIframe.style.top = `${y}px`;
+            }
+
+            // Call updateIframePosition on each render
+            const originalAnimate = animate;
+            function animateWithIframe() {
+                originalAnimate();
+                updateIframePosition();
+            }
+            animate = animateWithIframe;
+
+            window.addEventListener('resize', updateIframePosition);
+
+            // 11. Event Listeners
             // Listen for keyboard input for movement
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
