@@ -29,11 +29,52 @@
             z-index: 10;
             text-align: center;
         }
+        /* Styling for the social links section */
+        #social-links {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 1.15em;
+            z-index: 30;
+            text-align: center;
+        }
+        #social-links a {
+            color: #00baff;
+            text-decoration: underline;
+            margin: 0 10px;
+        }
+        #social-links a.github {
+            color: #FFD700;
+        }
     </style>
 </head>
 <body>
     <div id="instructions">
         Use **W A S D** keys to move the character.
+    </div>
+    <div id="card-coords" style="position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 18px;border-radius:8px;font-size:1.1em;z-index:20;display:none;pointer-events:none;"></div>
+    <!-- Social Links Section -->
+    <div id="social-links" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:16px 32px;border-radius:12px;font-size:1.15em;z-index:30;text-align:center;">
+        <strong>Mason:</strong>
+        <a href="https://www.linkedin.com/in/mason-linkedin" target="_blank" style="color:#00baff;text-decoration:underline;margin:0 10px;vertical-align:middle;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;filter:invert(41%) sepia(99%) saturate(749%) hue-rotate(170deg) brightness(97%) contrast(101%);">LinkedIn
+        </a>
+        <a href="https://github.com/mason" target="_blank" style="color:#FFD700;text-decoration:underline;margin:0 10px;vertical-align:middle;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="GitHub" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;filter:invert(80%) sepia(100%) saturate(500%) hue-rotate(10deg) brightness(110%) contrast(110%);">GitHub
+        </a>
+        <br>
+        <strong>Tyson:</strong>
+        <a href="https://www.linkedin.com/in/tyson-linkedin" target="_blank" style="color:#00baff;text-decoration:underline;margin:0 10px;vertical-align:middle;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;filter:invert(41%) sepia(99%) saturate(749%) hue-rotate(170deg) brightness(97%) contrast(101%);">LinkedIn
+        </a>
+        <a href="https://github.com/tyson" target="_blank" style="color:#FFD700;text-decoration:underline;margin:0 10px;vertical-align:middle;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="GitHub" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;filter:invert(80%) sepia(100%) saturate(500%) hue-rotate(10deg) brightness(110%) contrast(110%);">GitHub
+        </a>
     </div>
 
     <!-- Three.js library import -->
@@ -118,28 +159,53 @@
             context.textAlign = 'center';
             context.fillText('Project Image', width / 2, imageHeight / 2);
 
-            // Title
+            // Title - with word wrapping for long titles
             context.fillStyle = '#333';
-            context.font = 'Bold 40px Inter'; // Reduced from 60px
+            context.font = 'Bold 32px Inter'; // Slightly smaller for better fit
             context.textAlign = 'center';
-            context.fillText(title, width / 2, imageHeight + 35);
-
-            // Description with scrolling text effect
-            context.fillStyle = '#666';
-            context.font = '24px Inter'; // Reduced from 40px
-            context.textAlign = 'left'; // Changed to left align for better readability
             
-            // Create scrolling text in a defined area
-            const textAreaY = imageHeight + 70;
+            // Wrap title if too long
+            const titleWords = title.split(' ');
+            const titleLines = [];
+            let titleLine = '';
+            const titleMaxWidth = width - 40;
+            
+            for (let i = 0; i < titleWords.length; i++) {
+                const testTitleLine = titleLine + titleWords[i] + ' ';
+                const titleMetrics = context.measureText(testTitleLine);
+                if (titleMetrics.width > titleMaxWidth && i > 0) {
+                    titleLines.push(titleLine.trim());
+                    titleLine = titleWords[i] + ' ';
+                } else {
+                    titleLine = testTitleLine;
+                }
+            }
+            if (titleLine.trim()) {
+                titleLines.push(titleLine.trim());
+            }
+            
+            // Draw title lines
+            const titleStartY = imageHeight + 25;
+            titleLines.forEach((line, index) => {
+                context.fillText(line, width / 2, titleStartY + (index * 35));
+            });
+
+            // Description with improved word wrapping
+            context.fillStyle = '#666';
+            context.font = '20px Inter'; // Slightly smaller for better fit
+            context.textAlign = 'left';
+            
+            // Calculate text area based on title height
+            const textAreaY = titleStartY + (titleLines.length * 35) + 15;
             const textAreaHeight = height - textAreaY - 20;
-            const lineHeight = 30;
+            const lineHeight = 25; // Reduced line height for more lines
             const maxLines = Math.floor(textAreaHeight / lineHeight);
             
-            // Word wrap for description
+            // Improved word wrap for description
             const words = description.split(' ');
             const lines = [];
             let line = '';
-            const maxWidth = width - 60; // More padding
+            const maxWidth = width - 50; // Better padding
             
             for (let n = 0; n < words.length; n++) {
                 const testLine = line + words[n] + ' ';
@@ -156,15 +222,22 @@
                 lines.push(line.trim());
             }
 
-            // Draw visible lines (truncate if too many)
+            // Draw visible lines with better spacing
             const visibleLines = lines.slice(0, maxLines);
             visibleLines.forEach((textLine, index) => {
-                context.fillText(textLine, 30, textAreaY + (index * lineHeight));
+                context.fillText(textLine, 25, textAreaY + (index * lineHeight));
             });
 
             // Add "..." if text is truncated
-            if (lines.length > maxLines) {
-                context.fillText('...', 30, textAreaY + ((maxLines - 1) * lineHeight) + 25);
+            if (lines.length > maxLines && maxLines > 0) {
+                // Replace last line with truncated version + "..."
+                if (visibleLines.length > 0) {
+                    const lastLineY = textAreaY + ((visibleLines.length - 1) * lineHeight);
+                    context.clearRect(25, lastLineY - 20, maxWidth, 25);
+                    const truncatedText = visibleLines[visibleLines.length - 1].substring(0, 
+                        Math.max(0, visibleLines[visibleLines.length - 1].length - 10)) + '...';
+                    context.fillText(truncatedText, 25, lastLineY);
+                }
             }
 
             return canvas;
@@ -189,7 +262,7 @@
                 frustumSize / 2,            // top
                 frustumSize / -2,           // bottom
                 1,                          // near clipping plane
-                2000                        // far clipping plane
+                50000                       // far clipping plane (increased from 10000)
             );
             // Initial camera position (will be updated by trailing logic)
             camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
@@ -201,52 +274,127 @@
             renderer.setPixelRatio(window.devicePixelRatio); // Handle high DPI screens
             document.body.appendChild(renderer.domElement); // Add the renderer's canvas to the DOM
 
-            // Enable shadows in the renderer
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
-
             // 4. Lighting
             // HemisphereLight: Simulates natural light from the sky and ground
-            // Arguments: skyColor, groundColor, intensity
             const skyColor = new THREE.Color(0xADD8E6); // Lighter blue for the sky
             const groundColor = new THREE.Color(0x406090); // Darker blue for the ground/ambient shadow
             const hemisphereLight = new THREE.HemisphereLight(skyColor, groundColor, 0.7);
             scene.add(hemisphereLight);
 
-            // DirectionalLight: Simulates light from a distant source (like the sun)
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // White light, increased intensity
-            directionalLight.position.set(200, 300, 100); // Position it from top-right-front
-            directionalLight.castShadow = true; // Enable shadows
+            // Add a visible sun (yellow sphere) and a DirectionalLight
+            const sun = new THREE.Mesh(
+                new THREE.SphereGeometry(100, 32, 32),
+                new THREE.MeshBasicMaterial({ color: 0xFFF700 })
+            );
+            sun.position.set(-1200, 1800, -1200); // High in the sky, off to the side
+            scene.add(sun);
 
-            // Configure shadow camera for directional light
-            directionalLight.shadow.mapSize.width = 1024; // default is 512
-            directionalLight.shadow.mapSize.height = 1024; // default is 512
-            directionalLight.shadow.camera.near = 0.5; // default
-            directionalLight.shadow.camera.far = 500; // default
-            directionalLight.shadow.camera.left = -500;
-            directionalLight.shadow.camera.right = 500;
-            directionalLight.shadow.camera.top = 500;
-            directionalLight.shadow.camera.bottom = -500;
-            scene.add(directionalLight);
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            sunLight.position.copy(sun.position);
+            sunLight.target.position.set(0, 0, 0);
+            scene.add(sunLight);
+            scene.add(sunLight.target);
+            sunLight.castShadow = true; // Enable shadow casting (simple)
+            // Simple shadow settings for visibility
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            sunLight.shadow.camera.near = 500;
+            sunLight.shadow.camera.far = 4000;
+            sunLight.shadow.camera.left = -2000;
+            sunLight.shadow.camera.right = 2000;
+            sunLight.shadow.camera.top = 2000;
+            sunLight.shadow.camera.bottom = -2000;
 
             // 5. Ground Plane
             // Create a large, flat plane for the ground
-            const planeGeometry = new THREE.PlaneGeometry(2000, 2000);
+            const planeGeometry = new THREE.PlaneGeometry(4000, 4000); // Increased from 2000x2000
             // A simple grey material for the ground
             const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x888888, side: THREE.DoubleSide });
             plane = new THREE.Mesh(planeGeometry, planeMaterial);
             plane.rotation.x = -Math.PI / 2; // Rotate to be flat on the XZ plane
-            plane.receiveShadow = true; // Allow the plane to receive shadows
+            plane.receiveShadow = true; // Enable ground to receive shadows
             scene.add(plane);
 
+            // Barrier along the perimeter of the grey plane
+            const barrierHeight = 80;
+            const barrierThickness = 20;
+            const barrierLength = 4000;
+            const barrierMaterial = new THREE.MeshLambertMaterial({ color: 0x222222 });
+            // North
+            const barrierNorth = new THREE.Mesh(new THREE.BoxGeometry(barrierLength, barrierHeight, barrierThickness), barrierMaterial);
+            barrierNorth.position.set(0, barrierHeight/2, -2000 + barrierThickness/2);
+            scene.add(barrierNorth);
+            // South
+            const barrierSouth = new THREE.Mesh(new THREE.BoxGeometry(barrierLength, barrierHeight, barrierThickness), barrierMaterial);
+            barrierSouth.position.set(0, barrierHeight/2, 2000 - barrierThickness/2);
+            scene.add(barrierSouth);
+            // East
+            const barrierEast = new THREE.Mesh(new THREE.BoxGeometry(barrierThickness, barrierHeight, barrierLength), barrierMaterial);
+            barrierEast.position.set(2000 - barrierThickness/2, barrierHeight/2, 0);
+            scene.add(barrierEast);
+            // West
+            const barrierWest = new THREE.Mesh(new THREE.BoxGeometry(barrierThickness, barrierHeight, barrierLength), barrierMaterial);
+            barrierWest.position.set(-2000 + barrierThickness/2, barrierHeight/2, 0);
+            scene.add(barrierWest);
+
+            // Invisible barrier along the perimeter (for collision only)
+            const invisibleBarrierMaterial = new THREE.MeshBasicMaterial({ visible: false });
+            // North (invisible)
+            const invisibleBarrierNorth = new THREE.Mesh(new THREE.BoxGeometry(barrierLength, barrierHeight, barrierThickness), invisibleBarrierMaterial);
+            invisibleBarrierNorth.position.set(0, barrierHeight/2, -2000 + barrierThickness/2);
+            scene.add(invisibleBarrierNorth);
+            // South (invisible)
+            const invisibleBarrierSouth = new THREE.Mesh(new THREE.BoxGeometry(barrierLength, barrierHeight, barrierThickness), invisibleBarrierMaterial);
+            invisibleBarrierSouth.position.set(0, barrierHeight/2, 2000 - barrierThickness/2);
+            scene.add(invisibleBarrierSouth);
+            // East (invisible)
+            const invisibleBarrierEast = new THREE.Mesh(new THREE.BoxGeometry(barrierThickness, barrierHeight, barrierLength), invisibleBarrierMaterial);
+            invisibleBarrierEast.position.set(2000 - barrierThickness/2, barrierHeight/2, 0);
+            scene.add(invisibleBarrierEast);
+            // West (invisible)
+            const invisibleBarrierWest = new THREE.Mesh(new THREE.BoxGeometry(barrierThickness, barrierHeight, barrierLength), invisibleBarrierMaterial);
+            invisibleBarrierWest.position.set(-2000 + barrierThickness/2, barrierHeight/2, 0);
+            scene.add(invisibleBarrierWest);
+
             // 6. Character
-            // Create a simple character (e.g., a red box)
-            const characterGeometry = new THREE.BoxGeometry(50, 100, 50); // Width, Height, Depth
-            const characterMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 }); // Red color
-            character = new THREE.Mesh(characterGeometry, characterMaterial);
-            character.position.y = 50; // Position it slightly above the plane so it doesn't sink
-            character.castShadow = true; // Allow the character to cast shadows
-            scene.add(character);
+            // Try to load the car model, fallback to red box if not present
+            if (typeof THREE.GLTFLoader === 'undefined') {
+                // Dynamically load GLTFLoader if not present
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+                script.onload = () => initCarModel();
+                document.head.appendChild(script);
+            } else {
+                initCarModel();
+            }
+
+            function initCarModel() {
+                let loader = new THREE.GLTFLoader();
+                loader.load('Retro FNaF 1.glb', function(gltf) {
+                    if (character) scene.remove(character);
+                    character = gltf.scene;
+                    character.scale.set(30, 30, 30); // Adjust scale as needed
+                    character.position.set(0, 0, 0); // Centered on ground
+                    character.position.y = 15; // Adjust for ground contact
+                    character.traverse(function(child) {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    scene.add(character);
+                }, undefined, function(error) {
+                    // If error, keep the red box
+                    if (!character) {
+                        const characterGeometry = new THREE.BoxGeometry(50, 100, 50);
+                        const characterMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+                        character = new THREE.Mesh(characterGeometry, characterMaterial);
+                        character.position.y = 50; // Box sits on ground
+                        character.castShadow = true;
+                        scene.add(character);
+                    }
+                });
+            }
 
             // 7. Text Overlays on Floor
             const textPlaneWidth = 2000;
@@ -260,22 +408,9 @@
             const masonHeaderMaterial = new THREE.MeshBasicMaterial({ map: masonHeaderTexture, transparent: true, side: THREE.DoubleSide });
             const masonHeaderPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), masonHeaderMaterial);
             masonHeaderPlane.rotation.x = -Math.PI / 2;
-            masonHeaderPlane.position.z = -400; // Above donut, in Mason's area
+            masonHeaderPlane.position.z = -600; // Moved further up from -400
             masonHeaderPlane.position.y = 0.1;
             scene.add(masonHeaderPlane);
-
-            // Center text plane (donut)
-            const amongusCanvas = createTextCanvas(
-                [{ text: "donut", font: 'Bold 150px Inter', y: 100 }], '#FFFFFF', 'rgba(0,0,0,0.7)', // White text, more opaque background
-                textPlaneWidth, 200 // Shorter height for the center text
-            );
-            const amongusTexture = new THREE.CanvasTexture(amongusCanvas);
-            const amongusMaterial = new THREE.MeshBasicMaterial({ map: amongusTexture, transparent: true, side: THREE.DoubleSide });
-            const amongusPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), amongusMaterial);
-            amongusPlane.rotation.x = -Math.PI / 2; // Lay flat
-            amongusPlane.position.z = 0; // Centered between Mason and Tyson
-            amongusPlane.position.y = 0.11; // Slightly above the other planes to prevent z-fighting
-            scene.add(amongusPlane);
 
             // Tyson's Projects Header (below donut)
             const tysonHeaderCanvas = createTextCanvas(
@@ -286,8 +421,8 @@
             const tysonHeaderMaterial = new THREE.MeshBasicMaterial({ map: tysonHeaderTexture, transparent: true, side: THREE.DoubleSide });
             const tysonHeaderPlane = new THREE.Mesh(new THREE.PlaneGeometry(textPlaneWidth, 200), tysonHeaderMaterial);
             tysonHeaderPlane.rotation.x = -Math.PI / 2;
-            tysonHeaderPlane.position.z = 400; // Below donut, in Tyson's area
-            tysonHeaderPlane.position.y = 0.1;
+            tysonHeaderPlane.position.z = 600; // Moved further down from 400
+            tysonHeaderPlane.position.y = 0.1;55
             scene.add(tysonHeaderPlane);
 
             // 8. Project Cards
@@ -296,7 +431,7 @@
 
             // Mason's Project Cards
             const masonProject1Canvas = createProjectCard(
-                "Awesome Game",
+                "masonProject1Plane - Awesome Game",
                 "An innovative 3D adventure game with stunning graphics and immersive gameplay mechanics.",
                 "",
                 cardWidth,
@@ -306,28 +441,59 @@
             const masonProject1Material = new THREE.MeshBasicMaterial({ map: masonProject1Texture, transparent: true });
             const masonProject1Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject1Material);
             masonProject1Plane.rotation.x = -Math.PI / 2;
-            masonProject1Plane.position.set(-300, 0.12, -600);
+            masonProject1Plane.position.set(-400, 0.12, -1550); // Moved WAY down from -900
             masonProject1Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/awesome-game' };
             scene.add(masonProject1Plane);
 
             const masonProject2Canvas = createProjectCard(
-                "Cool Website",
+                "masonProject2Plane - Cool Website",
                 "A responsive modern website built with cutting-edge technologies and beautiful design.",
                 "",
                 cardWidth,
                 cardHeight
             );
             const masonProject2Texture = new THREE.CanvasTexture(masonProject2Canvas);
-            const masonProject2Material = new THREE.MeshBasicMaterial({ map: masonProject2Texture, transparent: true });
+            const masonProject2Material = new THREE.MeshBasicMaterial({ map: masonProject2Texture, transparent: true });100
             const masonProject2Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject2Material);
             masonProject2Plane.rotation.x = -Math.PI / 2;
-            masonProject2Plane.position.set(300, 0.12, -600);
+            masonProject2Plane.position.set(400, 0.12, -1550); // Moved WAY down from -900
             masonProject2Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/cool-website' };
             scene.add(masonProject2Plane);
 
+            // Mason's Project Cards - Row 2
+            const masonProject3Canvas = createProjectCard(
+                "masonProject3Plane - Mobile App",
+                "Cross-platform mobile application with intuitive UI and seamless user experience across devices.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const masonProject3Texture = new THREE.CanvasTexture(masonProject3Canvas);
+            const masonProject3Material = new THREE.MeshBasicMaterial({ map: masonProject3Texture, transparent: true });
+            const masonProject3Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject3Material);
+            masonProject3Plane.rotation.x = -Math.PI / 2;
+            masonProject3Plane.position.set(-400, 0.12, -1000); // Moved WAY down from -1100
+            masonProject3Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/mobile-app' };
+            scene.add(masonProject3Plane);
+
+            const masonProject4Canvas = createProjectCard(
+                "masonProject4Plane - E-commerce Platform",
+                "Full-stack e-commerce solution with payment integration, inventory management, and analytics.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const masonProject4Texture = new THREE.CanvasTexture(masonProject4Canvas);
+            const masonProject4Material = new THREE.MeshBasicMaterial({ map: masonProject4Texture, transparent: true });
+            const masonProject4Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), masonProject4Material);
+            masonProject4Plane.rotation.x = -Math.PI / 2;
+            masonProject4Plane.position.set(400, 0.12, -1000); // Moved WAY down from -1100
+            masonProject4Plane.userData = { type: 'projectCard', url: 'https://github.com/mason/ecommerce-platform' };
+            scene.add(masonProject4Plane);
+
             // Tyson's Project Cards
             const tysonProject1Canvas = createProjectCard(
-                "AI Assistant",
+                "tysonProject1Plane - AI Assistant",
                 "An intelligent AI-powered assistant that helps users with various tasks and provides smart recommendations.",
                 "",
                 cardWidth,
@@ -337,12 +503,12 @@
             const tysonProject1Material = new THREE.MeshBasicMaterial({ map: tysonProject1Texture, transparent: true });
             const tysonProject1Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject1Material);
             tysonProject1Plane.rotation.x = -Math.PI / 2;
-            tysonProject1Plane.position.set(-300, 0.12, 600);
+            tysonProject1Plane.position.set(-400, 0.12, 1000); // Moved WAY down from 900
             tysonProject1Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/ai-assistant' };
             scene.add(tysonProject1Plane);
 
             const tysonProject2Canvas = createProjectCard(
-                "Data Visualizer",
+                "tysonProject2Plane - Data Visualizer",
                 "A powerful tool for creating interactive data visualizations and insightful analytics dashboards.",
                 "",
                 cardWidth,
@@ -352,16 +518,117 @@
             const tysonProject2Material = new THREE.MeshBasicMaterial({ map: tysonProject2Texture, transparent: true });
             const tysonProject2Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject2Material);
             tysonProject2Plane.rotation.x = -Math.PI / 2;
-            tysonProject2Plane.position.set(300, 0.12, 600);
+            tysonProject2Plane.position.set(400, 0.12, 1000); // Moved WAY down from 900
             tysonProject2Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/data-visualizer' };
             scene.add(tysonProject2Plane);
+
+
+            // Tyson's Project Cards - Row 2
+            const tysonProject3Canvas = createProjectCard(
+                "tysonProject3Plane - Machine Learning Model",
+                "Advanced ML model for predictive analytics with real-time data processing and insights generation.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const tysonProject3Texture = new THREE.CanvasTexture(tysonProject3Canvas);
+            const tysonProject3Material = new THREE.MeshBasicMaterial({ map: tysonProject3Texture, transparent: true });
+            const tysonProject3Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject3Material);
+            tysonProject3Plane.rotation.x = -Math.PI / 2;
+            tysonProject3Plane.position.set(-400, 0.12, 1550); // Moved WAY down from 1100
+            tysonProject3Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/ml-model' };
+            scene.add(tysonProject3Plane);
+
+            const tysonProject4Canvas = createProjectCard(
+                "Cloud Infrastructure",
+                "Scalable cloud infrastructure solution with automated deployment, monitoring, and security features.",
+                "",
+                cardWidth,
+                cardHeight
+            );
+            const tysonProject4Texture = new THREE.CanvasTexture(tysonProject4Canvas);
+            const tysonProject4Material = new THREE.MeshBasicMaterial({ map: tysonProject4Texture, transparent: true });
+            const tysonProject4Plane = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth, cardHeight), tysonProject4Material);
+            tysonProject4Plane.rotation.x = -Math.PI / 2;
+            tysonProject4Plane.position.set(400, 0.12, 1550); // Moved WAY down from 1100
+            tysonProject4Plane.userData = { type: 'projectCard', url: 'https://github.com/tyson/cloud-infrastructure' };
+            scene.add(tysonProject4Plane);
 
             // 9. Mouse Interaction for Project Cards
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
-            const projectCards = [masonProject1Plane, masonProject2Plane, tysonProject1Plane, tysonProject2Plane];
+            const projectCards = [
+                masonProject1Plane, masonProject2Plane, masonProject3Plane, masonProject4Plane,
+                tysonProject1Plane, tysonProject2Plane, tysonProject3Plane, tysonProject4Plane
+            ];
+
+            let draggingCard = null;
+            let dragOffset = new THREE.Vector3();
+            let dragPlane = new THREE.Plane();
+            let isDragging = false;
+            let lastIntersect = null;
+
+            const coordsDiv = document.getElementById('card-coords');
+
+            function getPointer(event) {
+                return {
+                    x: (event.clientX / window.innerWidth) * 2 - 1,
+                    y: -(event.clientY / window.innerHeight) * 2 + 1
+                };
+            }
+
+            function onMouseDown(event) {
+                const pointer = getPointer(event);
+                mouse.x = pointer.x;
+                mouse.y = pointer.y;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(projectCards);
+                if (intersects.length > 0) {
+                    draggingCard = intersects[0].object;
+                    lastIntersect = intersects[0];
+                    // Set up a drag plane parallel to the card
+                    dragPlane.setFromNormalAndCoplanarPoint(
+                        new THREE.Vector3(0, 1, 0),
+                        draggingCard.position
+                    );
+                    // Find offset between card position and intersection point
+                    dragOffset.copy(lastIntersect.point).sub(draggingCard.position);
+                    isDragging = true;
+                    coordsDiv.style.display = 'block';
+                    updateCoordsDisplay(draggingCard);
+                    document.body.style.cursor = 'grabbing';
+                }
+            }
+
+            function onMouseMoveDrag(event) {
+                if (!isDragging || !draggingCard) return;
+                const pointer = getPointer(event);
+                raycaster.setFromCamera(pointer, camera);
+                // Intersect with drag plane
+                const intersection = new THREE.Vector3();
+                if (raycaster.ray.intersectPlane(dragPlane, intersection)) {
+                    // Only move in X and Z (keep Y fixed)
+                    draggingCard.position.x = intersection.x - dragOffset.x;
+                    draggingCard.position.z = intersection.z - dragOffset.z;
+                    updateCoordsDisplay(draggingCard);
+                }
+            }
+
+            function onMouseUp(event) {
+                if (isDragging) {
+                    isDragging = false;
+                    draggingCard = null;
+                    coordsDiv.style.display = 'none';
+                    document.body.style.cursor = 'default';
+                }
+            }
+
+            function updateCoordsDisplay(card) {
+                coordsDiv.innerText = `Card Position: X=${card.position.x.toFixed(1)}, Z=${card.position.z.toFixed(1)}`;
+            }
 
             function onMouseClick(event) {
+                if (isDragging) return; // Prevent click while dragging
                 // Calculate mouse position in normalized device coordinates
                 mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -374,13 +641,18 @@
 
                 if (intersects.length > 0) {
                     const clickedObject = intersects[0].object;
-                    if (clickedObject.userData.type === 'projectCard' && clickedObject.userData.url) {
-                        window.open(clickedObject.userData.url, '_blank');
-                    }
+                    // Disabled: open link in new tab
+                    // if (clickedObject.userData.type === 'projectCard' && clickedObject.userData.url) {
+                    //     window.open(clickedObject.userData.url, '_blank');
+                    // }
                 }
             }
 
             function onMouseMove(event) {
+                if (isDragging) {
+                    onMouseMoveDrag(event);
+                    return;
+                }
                 // Calculate mouse position for hover effects
                 mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -403,54 +675,59 @@
             }
 
             // Add mouse event listeners
-            document.addEventListener('click', onMouseClick);
+            document.addEventListener('mousedown', onMouseDown);
             document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('click', onMouseClick);
 
             // 10. YouTube Video Pedestal Display (right side of scene)
-            const videoWidth = 220;
-            const videoHeight = 124;
-            const pedestalHeight = 120;
-            const pedestalRadius = 90;
+            // const videoWidth = 220;
+            // const videoHeight = 124;
+            // const pedestalHeight = 120;
+            // const pedestalRadius = 90;
 
-            // Create a pedestal (cylinder)
-            const pedestalGeometry = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius, pedestalHeight, 32);
-            const pedestalMaterial = new THREE.MeshLambertMaterial({ color: 0xcccccc });
-            const pedestal = new THREE.Mesh(pedestalGeometry, pedestalMaterial);
-            pedestal.position.set(700, pedestalHeight / 2, 0);
-            scene.add(pedestal);
+            // // Create a pedestal (cylinder)
+            // const pedestalGeometry = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius, pedestalHeight, 32);
+            // const pedestalMaterial = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+            // const pedestal = new THREE.Mesh(pedestalGeometry, pedestalMaterial);
+            // pedestal.position.set(700, pedestalHeight / 2, 0);
+            // scene.add(pedestal);
 
-            // Create the iframe for the YouTube video (smaller size)
-            const youtubeIframe = document.createElement('iframe');
-            youtubeIframe.src = 'https://www.youtube.com/embed/apYvMDs31bA?start=138&autoplay=0&mute=1&controls=1';
-            youtubeIframe.width = videoWidth;
-            youtubeIframe.height = videoHeight;
-            youtubeIframe.style.border = 'none';
-            youtubeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-            youtubeIframe.allowFullscreen = true;
-            youtubeIframe.style.position = 'absolute';
-            youtubeIframe.style.zIndex = '20';
-            document.body.appendChild(youtubeIframe);
+            // // Create the iframe for the YouTube video (smaller size)
+            // const youtubeIframe = document.createElement('iframe');
+            // youtubeIframe.src = 'https://www.youtube.com/embed/apYvMDs31bA?si=jm6lus7KhYZydnXL&autoplay=0&mute=1&controls=1';
+            // youtubeIframe.width = videoWidth;
+            // youtubeIframe.height = videoHeight;
+            // youtubeIframe.style.border = 'none';
+            // youtubeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            // youtubeIframe.allowFullscreen = true;
+            // youtubeIframe.style.position = 'absolute';
+            // youtubeIframe.style.zIndex = '20';
+            // document.body.appendChild(youtubeIframe);
 
-            // Update the iframe position to match the top of the pedestal
-            function updateIframePosition() {
-                // 3D position at the top center of the pedestal
-                const vector = new THREE.Vector3(700, pedestalHeight + videoHeight / 8, 0);
-                vector.project(camera);
-                const x = (vector.x * 0.5 + 0.5) * window.innerWidth - videoWidth / 2;
-                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight - videoHeight / 2;
-                youtubeIframe.style.left = `${x}px`;
-                youtubeIframe.style.top = `${y}px`;
-            }
+            // // Update the iframe position to match the top of the pedestal
+            // function updateIframePosition() {
+            //     // 3D position at the top center of the pedestal
+            //     const vector = new THREE.Vector3(700, pedestalHeight + videoHeight / 8, 0);
+            //     vector.project(camera);
+            //     const x = (vector.x * 0.5 + 0.5) * window.innerWidth - videoWidth / 2;
+            //     const y = (-vector.y * 0.5 + 0.5) * window.innerHeight - videoHeight / 2;
+            //     // Remove scaling for zoom, keep video size fixed in screen pixels
+            //     youtubeIframe.style.transform = '';
+            //     youtubeIframe.style.transformOrigin = '';
+            //     youtubeIframe.style.left = `${x}px`;
+            //     youtubeIframe.style.top = `${y}px`;
+            // }
 
-            // Call updateIframePosition on each render
-            const originalAnimate = animate;
-            function animateWithIframe() {
-                originalAnimate();
-                updateIframePosition();
-            }
-            animate = animateWithIframe;
+            // // Call updateIframePosition on each render
+            // const originalAnimate = animate;
+            // function animateWithIframe() {
+            //     originalAnimate();
+            //     updateIframePosition();
+            // }
+            // animate = animateWithIframe;
 
-            window.addEventListener('resize', updateIframePosition);
+            // window.addEventListener('resize', updateIframePosition);
 
             // 11. Event Listeners
             // Listen for keyboard input for movement
@@ -458,6 +735,21 @@
             document.addEventListener('keyup', onKeyUp);
             // Listen for window resize events to update camera and renderer
             window.addEventListener('resize', onWindowResize);
+
+            // Add scroll wheel zoom for orthographic camera
+            function onDocumentWheel(event) {
+                event.preventDefault();
+                const zoomSpeed = 1.05;
+                const minZoom = 0.3;
+                const maxZoom = 3.0;
+                if (event.deltaY < 0) {
+                    camera.zoom = Math.min(camera.zoom * zoomSpeed, maxZoom);
+                } else {
+                    camera.zoom = Math.max(camera.zoom / zoomSpeed, minZoom);
+                }
+                camera.updateProjectionMatrix();
+            }
+            document.addEventListener('wheel', onDocumentWheel, { passive: false });
         }
 
         /**
@@ -519,6 +811,7 @@
         /**
          * The animation loop, continuously updates the scene and renders.
          */
+        let carTargetRotation = null;
         function animate() {
             requestAnimationFrame(animate); // Request the next frame
 
@@ -526,35 +819,37 @@
 
             // Update character position based on pressed keys
             if (character) {
-                if (keys.w) {
-                    character.position.z -= moveSpeed * deltaTime; // Move backward in Z (forward in view)
+                let moveVec = new THREE.Vector3();
+                if (keys.w) moveVec.z -= 1;
+                if (keys.s) moveVec.z += 1;
+                if (keys.a) moveVec.x -= 1;
+                if (keys.d) moveVec.x += 1;
+                if (moveVec.lengthSq() > 0) {
+                    moveVec.normalize();
+                    // Move character
+                    character.position.x += moveVec.x * moveSpeed * deltaTime;
+                    character.position.z += moveVec.z * moveSpeed * deltaTime;
+                    // Calculate target rotation (Y axis) for car to face movement direction
+                    carTargetRotation = Math.atan2(moveVec.x, moveVec.z);
                 }
-                if (keys.s) {
-                    character.position.z += moveSpeed * deltaTime; // Move forward in Z (backward in view)
+                // Smoothly rotate car towards target rotation
+                if (carTargetRotation !== null) {
+                    // Get current Y rotation
+                    let currentY = character.rotation.y;
+                    // Shortest angle difference
+                    let deltaY = carTargetRotation - currentY;
+                    // Wrap to [-PI, PI]
+                    deltaY = ((deltaY + Math.PI) % (2 * Math.PI)) - Math.PI;
+                    // Lerp rotation
+                    character.rotation.y += deltaY * Math.min(1, deltaTime * 8); // Smooth factor
                 }
-                if (keys.a) {
-                    character.position.x -= moveSpeed * deltaTime; // Move left in X
-                }
-                if (keys.d) {
-                    character.position.x += moveSpeed * deltaTime; // Move right in X
-                }
-
-                // Optional: Clamp character position to stay within the plane
-                const halfPlaneSize = 1000 / 2 - 25; // Plane size / 2 - half character size
-                character.position.x = Math.max(-halfPlaneSize, Math.min(halfPlaneSize, character.position.x));
-                character.position.z = Math.max(-halfPlaneSize, Math.min(halfPlaneSize, character.position.z));
-
                 // Camera Trailing Logic
-                // Calculate the target camera position
                 const targetCameraPosition = new THREE.Vector3().copy(character.position).add(cameraOffset);
-
-                // Smoothly interpolate camera's current position towards the target position
                 camera.position.lerp(targetCameraPosition, cameraFollowDampening);
-
-                // Make the camera look at the character's position
                 camera.lookAt(character.position);
             }
-
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.render(scene, camera); // Render the scene
         }
 
